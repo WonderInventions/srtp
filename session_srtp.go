@@ -21,6 +21,10 @@ const defaultSessionSRTPReplayProtectionWindow = 64
 type SessionSRTP struct {
 	session
 	writeStream *WriteStreamSRTP
+
+	// readHeader is reused by decrypt across packets to avoid a per-packet
+	// allocation and must only be used on the session read loop.
+	readHeader rtp.Header
 }
 
 // NewSessionSRTP creates a SRTP session using conn as the underlying transport.
@@ -183,7 +187,7 @@ func (s *SessionSRTP) setWriteDeadline(t time.Time) error {
 }
 
 func (s *SessionSRTP) decrypt(buf []byte) error {
-	header := &rtp.Header{}
+	header := &s.readHeader
 	headerLen, err := header.Unmarshal(buf)
 	if err != nil {
 		return err
